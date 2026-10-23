@@ -15,7 +15,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
-  String _cameraError = "";
 
   @override
   void initState() {
@@ -46,19 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       } else {
-        if (mounted) {
-          setState(() {
-            _cameraError = "No cameras found by the browser.";
-          });
-        }
+        debugPrint("No cameras found by the browser.");
       }
     } catch (e) {
       debugPrint("Error initializing web camera: $e");
-      if (mounted) {
-        setState(() {
-          _cameraError = "Camera Error: $e\nCheck browser permissions.";
-        });
-      }
     }
   }
 

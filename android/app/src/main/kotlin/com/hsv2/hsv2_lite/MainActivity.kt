@@ -142,23 +142,33 @@ class MainActivity : FlutterActivity() {
     // Native library
     // ============================================================
 
-    init {
-        try {
+    companion object {
+        private const val LOG_TAG = "HSV2Lite"
+        @Volatile
+        var nativeLoaded = false
+            private set
 
-            System.loadLibrary("hsv2_lite")
-
-            Log.i(
-                LOG_TAG,
-                "Native hsv2_lite library loaded successfully"
-            )
-
-        } catch (e: UnsatisfiedLinkError) {
-
-            Log.e(
-                LOG_TAG,
-                "Failed to load hsv2_lite native library: ${e.message}",
-                e
-            )
+        init {
+            try {
+                System.loadLibrary("realsense2")
+                Log.i(LOG_TAG, "Native realsense2 library loaded successfully")
+            } catch (t: Throwable) {
+                Log.w(LOG_TAG, "realsense2 load: ${t.message}")
+            }
+            try {
+                System.loadLibrary("hsv2_lite")
+                nativeLoaded = true
+                Log.i(
+                    LOG_TAG,
+                    "Native hsv2_lite library loaded successfully"
+                )
+            } catch (t: Throwable) {
+                Log.e(
+                    LOG_TAG,
+                    "Failed to load hsv2_lite native library: ${t.message}",
+                    t
+                )
+            }
         }
     }
 
@@ -350,55 +360,62 @@ class MainActivity : FlutterActivity() {
             ) as UsbManager
 
         // ========================================================
-        // USB receiver
+        // USB receiver (Guarded for Android 14+ SecurityException)
         // ========================================================
 
-        val filter =
-            IntentFilter(ACTION_USB_PERMISSION)
+        try {
+            val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
+                addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            }
 
-        filter.addAction(
-            UsbManager.ACTION_USB_DEVICE_ATTACHED
-        )
-
-        filter.addAction(
-            UsbManager.ACTION_USB_DEVICE_DETACHED
-        )
-
-        if (Build.VERSION.SDK_INT >= 33) {
-
-            registerReceiver(
-                usbReceiver,
-                filter,
-                Context.RECEIVER_EXPORTED
-            )
-
-        } else {
-
-            registerReceiver(
-                usbReceiver,
-                filter
-            )
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(
+                    usbReceiver,
+                    filter,
+                    Context.RECEIVER_EXPORTED
+                )
+            } else {
+                registerReceiver(
+                    usbReceiver,
+                    filter
+                )
+            }
+        } catch (t: Throwable) {
+            Log.e(LOG_TAG, "Failed to register usbReceiver: ${t.message}", t)
         }
 
         // Scene-description benchmark, started from the PC:
         //   adb shell am broadcast -a com.hsv2.DESCRIBE_TEST -p com.hsv2.hsv2_lite
         // Runs Gemma on up to 10 snapshots of the newest walk recording (files/rec/*.frames)
         // and writes files/scene_test.csv (image, ms, answer).
-        val testFilter = IntentFilter("com.hsv2.DESCRIBE_TEST")
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(describeTestReceiver, testFilter, Context.RECEIVER_EXPORTED)
-        else registerReceiver(describeTestReceiver, testFilter)
+        try {
+            val testFilter = IntentFilter("com.hsv2.DESCRIBE_TEST")
+            if (Build.VERSION.SDK_INT >= 33) registerReceiver(describeTestReceiver, testFilter, Context.RECEIVER_EXPORTED)
+            else registerReceiver(describeTestReceiver, testFilter)
+        } catch (t: Throwable) {
+            Log.e(LOG_TAG, "Failed to register describeTestReceiver: ${t.message}", t)
+        }
 
         // ========================================================
-        // Prepare QNN files
+        // Prepare QNN files & Initialize QNN HTP (Guarded)
         // ========================================================
 
-        prepareQnnFiles()
+        if (nativeLoaded) {
+            try {
+                prepareQnnFiles()
+            } catch (t: Throwable) {
+                Log.e(LOG_TAG, "prepareQnnFiles failed: ${t.message}", t)
+            }
 
-        // ========================================================
-        // Initialize QNN HTP
-        // ========================================================
-
-        initializeQnn()
+            try {
+                initializeQnn()
+            } catch (t: Throwable) {
+                Log.e(LOG_TAG, "initializeQnn failed: ${t.message}", t)
+            }
+        } else {
+            Log.w(LOG_TAG, "Native library not loaded; skipping QNN initialization")
+        }
 
         // ========================================================
         // Flutter Command Channel
@@ -602,9 +619,15 @@ class MainActivity : FlutterActivity() {
                             surfaceTexture
                         )
 
-                    setNativeWindow(
-                        rgbSurface!!
-                    )
+                    if (nativeLoaded) {
+                        try {
+                            setNativeWindow(
+                                rgbSurface!!
+                            )
+                        } catch (t: Throwable) {
+                            Log.e(LOG_TAG, "setNativeWindow failed: ${t.message}", t)
+                        }
+                    }
 
                     result.success(
                         rgbTextureEntry!!.id()
@@ -634,9 +657,15 @@ class MainActivity : FlutterActivity() {
                             surfaceTexture
                         )
 
-                    setDepthNativeWindow(
-                        depthSurface!!
-                    )
+                    if (nativeLoaded) {
+                        try {
+                            setDepthNativeWindow(
+                                depthSurface!!
+                            )
+                        } catch (t: Throwable) {
+                            Log.e(LOG_TAG, "setDepthNativeWindow failed: ${t.message}", t)
+                        }
+                    }
 
                     result.success(
                         depthTextureEntry!!.id()
@@ -762,12 +791,12 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
 
             Log.e(
                 LOG_TAG,
-                "Failed to prepare QNN files",
-                e
+                "Failed to prepare QNN files: ${t.message}",
+                t
             )
         }
     }
@@ -998,12 +1027,12 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
 
             Log.e(
                 LOG_TAG,
-                "QNN initialization exception",
-                e
+                "QNN initialization exception: ${t.message}",
+                t
             )
         }
     }
