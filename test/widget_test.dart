@@ -6,7 +6,7 @@ void main() {
   testWidgets('App starts and shows START button', (WidgetTester tester) async {
     await tester.pumpWidget(const HSV2LiteApp());
 
-    expect(find.text('NATIVE CAMERA FEED PLACEHOLDER'), findsOneWidget);
+    expect(find.text('WAITING FOR NATIVE REALSENSE FEED'), findsOneWidget);
     expect(find.text('START'), findsOneWidget);
   });
 }

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.10.2)
 
 project("hsv2_lite")
 
+# Limit concurrent compilation to 2 jobs to prevent OOM on 8GB RAM systems
+set_property(GLOBAL PROPERTY JOB_POOLS compile_jobs=2)
+set(CMAKE_JOB_POOL_COMPILE compile_jobs)
+
 # ============================================================
 # RealSense Android build configuration
 # ============================================================
@@ -26,26 +30,57 @@ include_directories(
 )
 
 # ============================================================
-# QNN SDK
+# Qualcomm AI Runtime (QAIRT / QNN) SDK
+#
+# Configurable via:
+# 1. CMake definition: -DQNN_SDK_ROOT="<path_to_qairt>"
+# 2. Environment variables: QNN_SDK_ROOT, QAIRT_SDK, QAIRT_HOME, QNN_HOME
+# 3. Default fallback directory: ${CMAKE_CURRENT_SOURCE_DIR}/qairt
 # ============================================================
 
-set(QNN_SDK_ROOT
-        "/home/naveen/Downloads/qairt/2.47.0.260601"
-)
+if (NOT DEFINED QNN_SDK_ROOT)
+    if (DEFINED ENV{QNN_SDK_ROOT} AND NOT "$ENV{QNN_SDK_ROOT}" STREQUAL "")
+        set(QNN_SDK_ROOT "$ENV{QNN_SDK_ROOT}")
+    elseif (DEFINED ENV{QAIRT_SDK} AND NOT "$ENV{QAIRT_SDK}" STREQUAL "")
+        set(QNN_SDK_ROOT "$ENV{QAIRT_SDK}")
+    elseif (DEFINED ENV{QAIRT_HOME} AND NOT "$ENV{QAIRT_HOME}" STREQUAL "")
+        set(QNN_SDK_ROOT "$ENV{QAIRT_HOME}")
+    elseif (DEFINED ENV{QNN_HOME} AND NOT "$ENV{QNN_HOME}" STREQUAL "")
+        set(QNN_SDK_ROOT "$ENV{QNN_HOME}")
+    else()
+        set(QNN_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/qairt")
+    endif()
+endif()
 
-set(QNN_INCLUDE_DIR
-        "${QNN_SDK_ROOT}/include"
-)
+file(TO_CMAKE_PATH "${QNN_SDK_ROOT}" QNN_SDK_ROOT)
+set(QNN_INCLUDE_DIR "${QNN_SDK_ROOT}/include")
 
-set(QNN_ANDROID_LIB_DIR
-        "${QNN_SDK_ROOT}/lib/aarch64-android"
-)
+# Verify standard QAIRT / QNN SDK header layout
+set(QNN_HEADERS_FOUND FALSE)
+if (EXISTS "${QNN_INCLUDE_DIR}/QNN/QnnInterface.h" OR EXISTS "${QNN_INCLUDE_DIR}/QnnInterface.h")
+    set(QNN_HEADERS_FOUND TRUE)
+endif()
 
-include_directories(
-        ${QNN_INCLUDE_DIR}
-        ${QNN_INCLUDE_DIR}/QNN
-        ${QNN_INCLUDE_DIR}/QNN/System
-)
+if (QNN_HEADERS_FOUND)
+    message(STATUS "Qualcomm QAIRT/QNN SDK headers located at: ${QNN_SDK_ROOT}")
+    include_directories(
+            ${QNN_INCLUDE_DIR}
+            ${QNN_INCLUDE_DIR}/QNN
+            ${QNN_INCLUDE_DIR}/QNN/System
+    )
+else()
+    message(WARNING
+        "Qualcomm QAIRT/QNN SDK headers not found at: ${QNN_INCLUDE_DIR}\n"
+        "To compile full Hexagon NPU inference, provide Qualcomm QAIRT SDK 2.47+ by:\n"
+        "  - Setting environment variable: QNN_SDK_ROOT=<path>\n"
+        "  - Passing CMake flag: -DQNN_SDK_ROOT=<path>\n"
+        "Required headers: QnnInterface.h, QnnGraph.h, QnnTensor.h, QnnTypes.h, QnnSystemInterface.h")
+    include_directories(
+            ${QNN_INCLUDE_DIR}
+            ${QNN_INCLUDE_DIR}/QNN
+            ${QNN_INCLUDE_DIR}/QNN/System
+    )
+endif()
 
 # ============================================================
 # HSV2 Lite native library
@@ -120,7 +155,7 @@ endif()
 # ============================================================
 # OpenVINS VIO (GPL-3.0; shadow mode, runtime switch debug.hsv2.vio)
 # ============================================================
-option(HSV2_VIO "Build OpenVINS visual-inertial odometry (GPL-3.0)" ON)
+option(HSV2_VIO "Build OpenVINS visual-inertial odometry (GPL-3.0)" OFF)
 if (HSV2_VIO)
     set(HSV2_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../..")
     set(OPENVINS_SRC "/home/naveen/Hearsight/third_party_src/open_vins" CACHE PATH "OpenVINS source tree")
