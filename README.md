@@ -17,6 +17,7 @@ Everything runs **on the phone completely offline**:
 
 ## Contents
 
+- [System Architecture & Workflow](ARCHITECTURE.md)
 - [What it does](#what-it-does)
 - [Hardware](#hardware)
 - [How it works](#how-it-works)
