@@ -246,7 +246,7 @@ void renderView3D(uint8_t* rgba, int width, int height, int stride, const LocalM
             }
     }
 
-    if (!path.empty() && opt.pathState == 1) {   // goal ring
+    if (plan && !path.empty() && opt.pathState == 1) {   // goal ring
         const uint8_t g2[3] = {120, 255, 140};
         for (int k = 0; k < 16; ++k) {
             const float a0 = k * 6.2832f / 16, a1 = (k + 1) * 6.2832f / 16;

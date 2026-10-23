@@ -86,10 +86,6 @@ class AppState extends ChangeNotifier {
         }
       });
 
-      // Auto-start Voice Assistant immediately on app launch
-      Future.delayed(const Duration(milliseconds: 600), () {
-        startVoiceAssistant(greet: true);
-      });
 
       // Periodic synchronization for voice assistant state & transcript
       _voiceWatch = Timer.periodic(const Duration(milliseconds: 400), (_) {

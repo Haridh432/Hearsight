@@ -47,6 +47,7 @@ class VoiceAssistantManager(
 
     private var speechRecognizer: SpeechRecognizer? = null
     private val audioRoute = AudioRoute(context)
+    private var pendingListenRunnable: Runnable? = null
 
     init {
         mainHandler.post {
@@ -84,6 +85,14 @@ class VoiceAssistantManager(
             return
         }
 
+        // Ignore duplicate start requests if already active
+        if (_state.value == AssistantVoiceState.SPEAKING || _state.value == AssistantVoiceState.LISTENING) {
+            Log.i(TAG, "Voice interaction already in progress (${_state.value.name}), skipping duplicate start")
+            return
+        }
+
+        pendingListenRunnable?.let { mainHandler.removeCallbacks(it) }
+
         if (!greeting.isNullOrBlank()) {
             _state.value = AssistantVoiceState.SPEAKING
             _lastTranscript.value = greeting
@@ -91,9 +100,12 @@ class VoiceAssistantManager(
 
             // Deliver spoken greeting, then immediately start listening with wake earcon
             val greetingDurationMs = (greeting.length * 65L).coerceIn(1500L, 2500L)
-            mainHandler.postDelayed({
+            val runnable = Runnable {
+                pendingListenRunnable = null
                 startListening()
-            }, greetingDurationMs)
+            }
+            pendingListenRunnable = runnable
+            mainHandler.postDelayed(runnable, greetingDurationMs)
         } else {
             startListening()
         }
@@ -112,6 +124,16 @@ class VoiceAssistantManager(
             return
         }
 
+        if (_state.value == AssistantVoiceState.LISTENING) {
+            Log.d(TAG, "Already listening, skipping redundant startListening")
+            return
+        }
+
+        pendingListenRunnable?.let {
+            mainHandler.removeCallbacks(it)
+            pendingListenRunnable = null
+        }
+
         mainHandler.post {
             try {
                 val recognizer = ensureSpeechRecognizer()
@@ -122,7 +144,7 @@ class VoiceAssistantManager(
                     return@post
                 }
 
-                // Cancel any previous session
+                // Safely cancel any lingering session
                 try { recognizer.cancel() } catch (_: Exception) {}
 
                 _state.value = AssistantVoiceState.LISTENING
@@ -157,6 +179,10 @@ class VoiceAssistantManager(
     }
 
     fun stopListening() {
+        pendingListenRunnable?.let {
+            mainHandler.removeCallbacks(it)
+            pendingListenRunnable = null
+        }
         mainHandler.post {
             try {
                 speechRecognizer?.stopListening()
@@ -164,6 +190,9 @@ class VoiceAssistantManager(
                 Log.w(TAG, "stopListening error", e)
             }
             audioRoute.end()
+            if (_state.value == AssistantVoiceState.LISTENING || _state.value == AssistantVoiceState.SPEAKING) {
+                _state.value = AssistantVoiceState.IDLE
+            }
         }
     }
 
@@ -269,6 +298,10 @@ class VoiceAssistantManager(
     }
 
     fun release() {
+        pendingListenRunnable?.let {
+            mainHandler.removeCallbacks(it)
+            pendingListenRunnable = null
+        }
         mainHandler.removeCallbacksAndMessages(null)
         mainHandler.post {
             try {
@@ -278,6 +311,7 @@ class VoiceAssistantManager(
                 Log.w(TAG, "speechRecognizer.destroy error", e)
             }
             audioRoute.end()
+            _state.value = AssistantVoiceState.IDLE
         }
     }
 

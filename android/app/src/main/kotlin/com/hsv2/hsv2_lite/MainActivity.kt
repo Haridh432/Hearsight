@@ -60,14 +60,16 @@ class MainActivity : FlutterActivity() {
                 }
             },
             onStopNavigation = {
-                try {
-                    stopPipeline()
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Voice stopPipeline failed", e)
-                }
                 validation.stop()
                 voiceGuide.onNavigationStopped()
                 runOnUiThread { window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+                Thread({
+                    try {
+                        stopPipeline()
+                    } catch (e: Exception) {
+                        Log.e(LOG_TAG, "Voice stopPipeline failed", e)
+                    }
+                }, "voiceStopPipelineThread").start()
             },
             onDescribeSurroundings = { q ->
                 runOnUiThread {
@@ -144,6 +146,7 @@ class MainActivity : FlutterActivity() {
         phoneImu.stop()
         super.onPause()
     }
+
 
     private val COMMAND_CHANNEL = "com.hsv2/command"
     private val TELEMETRY_CHANNEL = "com.hsv2/telemetry"
@@ -514,23 +517,23 @@ class MainActivity : FlutterActivity() {
                 }
 
                 "stopPipeline" -> {
-
                     Log.i(LOG_TAG, "STOP requested by the app UI (source: ${call.argument<String>("source") ?: "button"})")
-                    try {
-
-                        stopPipeline()
-
-                    } catch (e: Exception) {
-
-                        Log.e(
-                            LOG_TAG,
-                            "Native stopPipeline failed",
-                            e
-                        )
-                    }
                     validation.stop()   // STOP also ends a running validation test (file saved)
                     voiceGuide.onNavigationStopped()
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                    // Run native stopPipeline on background thread to prevent blocking main UI thread and avoid ANR
+                    Thread({
+                        try {
+                            stopPipeline()
+                        } catch (e: Exception) {
+                            Log.e(
+                                LOG_TAG,
+                                "Native stopPipeline failed",
+                                e
+                            )
+                        }
+                    }, "stopPipelineThread").start()
 
                     result.success(null)
                 }
