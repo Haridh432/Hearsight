@@ -61,6 +61,10 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Speech recognition service (Google Assistant / Android SpeechRecognizer) -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <!-- Text-to-speech engines (Phase 6 voice guidance). -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE"/>

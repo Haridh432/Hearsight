@@ -185,9 +185,33 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> sayNotice(String text) async {
+    if (kIsWeb || text.trim().isEmpty) return;
+    try {
+      await _commandChannel.invokeMethod('sayNotice', {'text': text});
+    } catch (_) {}
+  }
+
+  void handleStartClick() {
+    if (isCameraConnected) {
+      togglePipeline();
+    } else {
+      sayNotice("RealSense camera is not connected. Please connect the camera via USB to begin navigation.");
+    }
+  }
+
+  void handleDescribeClick() {
+    if (isPipelineRunning && !sceneBusy) {
+      describeScene();
+    } else {
+      sayNotice("Camera is not streaming. Please connect the camera and start navigation to describe the scene.");
+    }
+  }
+
   Future<void> cycleViewMode() async {
     viewMode = (viewMode + 1) % 4;
     notifyListeners();
+    sayNotice("View mode ${viewModeLabels[viewMode]}");
     if (kIsWeb) return;
     try {
       await _commandChannel.invokeMethod('setViewMode', {'mode': viewMode});
@@ -213,9 +237,16 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setVoice({bool? enabled, String? lang}) async {
+    final oldEnabled = voiceEnabled;
+    final oldLang = voiceLang;
     voiceEnabled = enabled ?? voiceEnabled;
     voiceLang = lang ?? voiceLang;
     notifyListeners();
+    if (enabled != null && enabled != oldEnabled) {
+      sayNotice(voiceEnabled ? "Voice guidance on" : "Voice guidance off");
+    } else if (lang != null && lang != oldLang) {
+      sayNotice(voiceLang == 'ta' ? "Voice language Tamil" : (voiceLang == 'both' ? "Voice language Tamil and English" : "Voice language English"));
+    }
     if (kIsWeb) return;
     try {
       final r = await _commandChannel.invokeMethod('setVoice', {'enabled': voiceEnabled, 'lang': voiceLang});

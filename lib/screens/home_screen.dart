@@ -330,21 +330,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 8),
                   Semantics(
                     button: true,
-                    enabled: state.isCameraConnected,
+                    enabled: true,
                     label: state.isPipelineRunning
                         ? 'Stop navigation'
                         : (state.isCameraConnected ? 'Start navigation' : 'Start navigation, camera not connected'),
                     excludeSemantics: true,
-                    onTap: state.isCameraConnected ? () => context.read<AppState>().togglePipeline() : null,
+                    onTap: () => context.read<AppState>().handleStartClick(),
                     child: ElevatedButton.icon(
-                    onPressed: state.isCameraConnected ? () => context.read<AppState>().togglePipeline() : null,
+                    onPressed: () => context.read<AppState>().handleStartClick(),
                     icon: Icon(state.isPipelineRunning ? Icons.stop : Icons.play_arrow, size: 30),
                     label: Text(state.isPipelineRunning ? 'STOP' : 'START',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(120, 60),   // large touch target
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      backgroundColor: state.isPipelineRunning ? Colors.red : Colors.teal,
+                      backgroundColor: state.isPipelineRunning ? Colors.red : (state.isCameraConnected ? Colors.teal : Colors.blueGrey),
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -393,11 +393,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   tooltip: "What's ahead? Describe the scene",
                   visualDensity: VisualDensity.compact,
-                  onPressed: state.isPipelineRunning && !state.sceneBusy
-                      ? () => context.read<AppState>().describeScene()
-                      : null,
+                  onPressed: () => context.read<AppState>().handleDescribeClick(),
                   icon: Icon(state.sceneBusy ? Icons.hourglass_top : Icons.record_voice_over,
-                      color: state.isPipelineRunning ? Colors.white : Colors.white38),
+                      color: state.isPipelineRunning ? Colors.white : Colors.white70),
                 ),
                 IconButton(
                   tooltip: state.isVoiceListening

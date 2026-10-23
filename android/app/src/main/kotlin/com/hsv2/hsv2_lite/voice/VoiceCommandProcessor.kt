@@ -209,14 +209,14 @@ class VoiceCommandProcessor(
     companion object {
         private const val TAG = "HSV2VoiceCmd"
 
-        private val START_NAV_REGEX = Regex("""\b(start|begin|resume)\s+(navigation|navigating|walk|walking|camera)\b""")
-        private val STOP_NAV_REGEX = Regex("""\b(stop|halt|pause|end|cancel)\s+(navigation|navigating|walk|walking|camera)\b""")
-        private val DESCRIBE_REGEX = Regex("""\b(describe|description|tell me about)\s+(the\s+)?(surroundings?|scene|room|environment|around)\b|\bwhat is around me\b|\bwhat'?s around me\b""")
-        private val READ_SCREEN_REGEX = Regex("""\b(read|tell me|what is|what's|check|show)\s+(the\s+)?(screen|status|display|telemetry)\b|\bread\s+screen\b|\bscreen\s+status\b|\bwhat\s+does\s+the\s+screen\s+say\b""")
-        private val FRONT_REGEX = Regex("""\bwhat\s+(is|s)\s+(in\s+front|ahead|directly\s+ahead)\b|\bwhat'?s\s+(in\s+front|ahead)\b""")
-        private val LEFT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?left|to\s+(my\s+)?left)\b|\b(look|anything\s+on\s+the)\s+left\b""")
-        private val RIGHT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?right|to\s+(my\s+)?right)\b|\b(look|anything\s+on\s+the)\s+right\b""")
-        private val GREETING_REGEX = Regex("""\b(hello|hi|hey|good\s+(morning|afternoon|evening)|who\s+are\s+you|who\s+is\s+this)\b""")
-        private val HELP_REGEX = Regex("""\b(help|what\s+can\s+you\s+do|commands|options|how\s+to\s+use)\b""")
+        private val START_NAV_REGEX = Regex("""\b(start|begin|resume)\s+(navigation|navigating|walk|walking|camera)\b|^\s*(start|begin|walk)\s*$""")
+        private val STOP_NAV_REGEX = Regex("""\b(stop|halt|pause|end|cancel)\s+(navigation|navigating|walk|walking|camera)\b|^\s*(stop|halt|pause)\s*$""")
+        private val DESCRIBE_REGEX = Regex("""\b(describe|description|tell me about)\s+(the\s+)?(surroundings?|scene|room|environment|around)\b|\bwhat is around me\b|\bwhat'?s around me\b|^\s*(describe|scene)\s*$""")
+        private val READ_SCREEN_REGEX = Regex("""\b(read|tell me|what is|what's|check|show)\s+(the\s+)?(screen|status|display|telemetry)\b|\bread\s+screen\b|\bscreen\s+status\b|\bwhat\s+does\s+the\s+screen\s+say\b|^\s*(read\s+screen|screen|status)\s*$""")
+        private val FRONT_REGEX = Regex("""\bwhat\s+(is|s)\s+(in\s+front|ahead|directly\s+ahead)\b|\bwhat'?s\s+(in\s+front|ahead)\b|^\s*(front|ahead)\s*$""")
+        private val LEFT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?left|to\s+(my\s+)?left)\b|\b(look|anything\s+on\s+the)\s+left\b|^\s*(left)\s*$""")
+        private val RIGHT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?right|to\s+(my\s+)?right)\b|\b(look|anything\s+on\s+the)\s+right\b|^\s*(right)\s*$""")
+        private val GREETING_REGEX = Regex("""\b(hello|hi|hey|good\s+(morning|afternoon|evening)|who\s+are\s+you|who\s+is\s+this)\b|^\s*(hello|hi|hey)\s*$""")
+        private val HELP_REGEX = Regex("""\b(help|what\s+can\s+you\s+do|commands|options|how\s+to\s+use)\b|^\s*help\s*$""")
     }
 }

@@ -599,6 +599,14 @@ class MainActivity : FlutterActivity() {
                     result.success(reply)
                 }
 
+                "sayNotice" -> {
+                    val text = call.argument<String>("text") ?: ""
+                    if (text.isNotBlank()) {
+                        voiceGuide.sayAssistantResponse(text)
+                    }
+                    result.success(null)
+                }
+
                 "describeScene" -> describeScene { text -> runOnUiThread { result.success(text) } }
 
                 "setLiveDescribe" -> {
