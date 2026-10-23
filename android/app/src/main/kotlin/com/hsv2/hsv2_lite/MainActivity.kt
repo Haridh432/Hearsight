@@ -3,11 +3,13 @@ package com.hsv2.hsv2_lite
 import java.io.File
 import java.io.FileOutputStream
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
@@ -16,6 +18,8 @@ import android.os.Looper
 import android.util.Log
 import androidx.annotation.Keep
 import androidx.annotation.NonNull
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -86,9 +90,54 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private var hasAutoStartedVoice = false
+
+    private fun checkPermissionsAndStartVoice(greet: Boolean = true) {
+        val missing = REQUIRED_PERMISSIONS.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            Log.i(LOG_TAG, "Requesting runtime permissions: $missing")
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), PERMISSION_REQUEST_CODE)
+        } else {
+            if (!hasAutoStartedVoice) {
+                hasAutoStartedVoice = true
+                Log.i(LOG_TAG, "Permissions already granted, starting voice interaction (greet=$greet)")
+                voiceGuide.whenReady {
+                    if (greet) {
+                        voiceAssistantManager.startInteraction()
+                    } else {
+                        voiceAssistantManager.startListening()
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            val audioIdx = permissions.indexOf(Manifest.permission.RECORD_AUDIO)
+            if (audioIdx != -1 && grantResults.getOrNull(audioIdx) == PackageManager.PERMISSION_GRANTED) {
+                Log.i(LOG_TAG, "RECORD_AUDIO granted, starting voice assistant interaction")
+                hasAutoStartedVoice = true
+                voiceGuide.whenReady {
+                    voiceAssistantManager.startInteraction()
+                }
+            } else {
+                Log.w(LOG_TAG, "RECORD_AUDIO permission was not granted by user")
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         phoneImu.start()
+        checkPermissionsAndStartVoice(greet = true)
     }
 
     override fun onPause() {
@@ -102,8 +151,6 @@ class MainActivity : FlutterActivity() {
 
     private val ACTION_USB_PERMISSION =
         "com.hsv2.hsv2_lite.USB_PERMISSION"
-
-    private val LOG_TAG = "HSV2Lite"
 
     // ============================================================
     // Flutter SurfaceTextures
@@ -144,6 +191,12 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val LOG_TAG = "HSV2Lite"
+        private const val PERMISSION_REQUEST_CODE = 2001
+        private val REQUIRED_PERMISSIONS = arrayOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA
+        )
+
         @Volatile
         var nativeLoaded = false
             private set
@@ -422,6 +475,7 @@ class MainActivity : FlutterActivity() {
         // ========================================================
 
         voiceGuide   // start the TTS engine early (it takes a moment to be ready)
+        voiceAssistantManager // warm up voice assistant models early in background
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             COMMAND_CHANNEL
@@ -509,8 +563,17 @@ class MainActivity : FlutterActivity() {
                 "getVoice" -> result.success(voiceGuide.statusJson().toString())
 
                 "startVoiceAssistant" -> {
-                    voiceAssistantManager.startListening()
-                    result.success(null)
+                    val greet = call.argument<Boolean>("greet") ?: false
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        if (greet) {
+                            voiceAssistantManager.startInteraction()
+                        } else {
+                            voiceAssistantManager.startListening()
+                        }
+                    } else {
+                        checkPermissionsAndStartVoice(greet = greet)
+                    }
+                    result.success(voiceAssistantManager.state.value.name)
                 }
 
                 "stopVoiceAssistant" -> {

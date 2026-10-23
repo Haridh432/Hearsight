@@ -65,6 +65,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription? _telemetrySub;
   DateTime _lastTelemetry = DateTime.fromMillisecondsSinceEpoch(0);
   Timer? _streamWatch;
+  Timer? _voiceWatch;
 
   AppState() {
     if (!kIsWeb) {
@@ -84,11 +85,26 @@ class AppState extends ChangeNotifier {
           notifyListeners();
         }
       });
+
+      // Auto-start Voice Assistant immediately on app launch
+      Future.delayed(const Duration(milliseconds: 600), () {
+        startVoiceAssistant(greet: true);
+      });
+
+      // Periodic synchronization for voice assistant state & transcript
+      _voiceWatch = Timer.periodic(const Duration(milliseconds: 400), (_) {
+        _commandChannel.invokeMethod('getVoiceAssistantStatus').then((r) {
+          if (r is String) {
+            _applyVoiceAssistantStatus(jsonDecode(r));
+          }
+        }).catchError((_) {});
+      });
     }
   }
 
   @override
   void dispose() {
+    _voiceWatch?.cancel();
     _streamWatch?.cancel();
     _telemetrySub?.cancel();
     super.dispose();
@@ -288,13 +304,16 @@ class AppState extends ChangeNotifier {
   String _voiceAssistantState = 'IDLE';
   String get voiceAssistantState => _voiceAssistantState;
   bool get isVoiceListening => _voiceAssistantState == 'LISTENING';
+  bool get isVoiceSpeaking => _voiceAssistantState == 'SPEAKING';
   String _voiceAssistantTranscript = '';
   String get voiceAssistantTranscript => _voiceAssistantTranscript;
 
-  Future<void> startVoiceAssistant() async {
+  Future<void> startVoiceAssistant({bool greet = false}) async {
     if (kIsWeb) return;
     try {
-      await _commandChannel.invokeMethod('startVoiceAssistant');
+      final r = await _commandChannel.invokeMethod('startVoiceAssistant', {'greet': greet});
+      _voiceAssistantState = (r is String && r.isNotEmpty) ? r : (greet ? 'SPEAKING' : 'LISTENING');
+      notifyListeners();
     } on PlatformException catch (e) {
       debugPrint("startVoiceAssistant failed: ${e.message}");
     }

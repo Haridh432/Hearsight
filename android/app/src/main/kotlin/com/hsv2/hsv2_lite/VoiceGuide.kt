@@ -71,6 +71,13 @@ class VoiceGuide(context: Context) {
         speech.initialize { applyLanguage() }
     }
 
+    fun whenReady(action: () -> Unit) {
+        speech.initialize {
+            applyLanguage()
+            action()
+        }
+    }
+
     fun release() {
         speech.release()
         haptics.cancel()

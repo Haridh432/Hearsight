@@ -1,8 +1,13 @@
 package com.hsv2.hsv2_lite.voice
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +39,7 @@ class VoiceAssistantManager(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "hearsight-voice-worker") }
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val _state = MutableStateFlow(AssistantVoiceState.IDLE)
     val state: StateFlow<AssistantVoiceState> = _state.asStateFlow()
@@ -107,9 +113,46 @@ class VoiceAssistantManager(
     }
 
     /**
+     * Start the assistant greeting interaction and automatically transition into listening mode.
+     */
+    fun startInteraction(greeting: String? = "Hello! I am Sago. How can I help you?") {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "Cannot start voice interaction: RECORD_AUDIO permission missing")
+            return
+        }
+
+        if (!greeting.isNullOrBlank()) {
+            _state.value = AssistantVoiceState.SPEAKING
+            _lastTranscript.value = greeting
+            onSayResponse(greeting)
+
+            // Deliver spoken greeting, then immediately start listening with wake earcon
+            val greetingDurationMs = (greeting.length * 70L).coerceIn(1600L, 3000L)
+            mainHandler.postDelayed({
+                if (_state.value == AssistantVoiceState.SPEAKING || _state.value == AssistantVoiceState.IDLE) {
+                    startListening()
+                }
+            }, greetingDurationMs)
+        } else {
+            startListening()
+        }
+    }
+
+    /**
      * Start listening for a voice command (Push-to-Talk or manual trigger).
      */
     fun startListening() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "Cannot start listening: RECORD_AUDIO permission missing")
+            _state.value = AssistantVoiceState.ERROR
+            _lastError.value = "Microphone permission required"
+            return
+        }
+
         if (_state.value == AssistantVoiceState.LISTENING) return
         _state.value = AssistantVoiceState.LISTENING
         _lastError.value = null
@@ -253,6 +296,7 @@ class VoiceAssistantManager(
     }
 
     fun release() {
+        mainHandler.removeCallbacksAndMessages(null)
         stopListeningInternal()
         activeStream?.close()
         audioRoute.end()

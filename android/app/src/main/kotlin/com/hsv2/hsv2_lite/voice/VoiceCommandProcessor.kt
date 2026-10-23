@@ -13,6 +13,8 @@ enum class VoiceIntent {
     WHAT_ON_LEFT,
     WHAT_ON_RIGHT,
     READ_SCREEN,
+    GREETING,
+    HELP,
     UNKNOWN
 }
 
@@ -62,9 +64,15 @@ class VoiceCommandProcessor(
             VoiceIntent.READ_SCREEN -> {
                 queryScreenStatus()
             }
+            VoiceIntent.GREETING -> {
+                "Hello! I am Sago, your Hearsight voice assistant. How can I help you today?"
+            }
+            VoiceIntent.HELP -> {
+                "You can ask me to: read screen, describe surroundings, start navigation, stop navigation, or ask what is in front, on the left, or on the right."
+            }
             VoiceIntent.UNKNOWN -> {
                 if (parsed.cleanedText.isBlank()) null
-                else "Command not recognized. You can say: start navigation, stop navigation, describe surroundings, read screen, or ask what is in front, left, or right."
+                else "I heard: \"${parsed.rawText}\". Say help, read screen, or start navigation."
             }
         }
     }
@@ -76,6 +84,8 @@ class VoiceCommandProcessor(
             STOP_NAV_REGEX.containsMatchIn(clean) -> VoiceIntent.STOP_NAVIGATION
             DESCRIBE_REGEX.containsMatchIn(clean) -> VoiceIntent.DESCRIBE_SURROUNDINGS
             READ_SCREEN_REGEX.containsMatchIn(clean) -> VoiceIntent.READ_SCREEN
+            GREETING_REGEX.containsMatchIn(clean) -> VoiceIntent.GREETING
+            HELP_REGEX.containsMatchIn(clean) -> VoiceIntent.HELP
             FRONT_REGEX.containsMatchIn(clean) -> VoiceIntent.WHAT_IN_FRONT
             LEFT_REGEX.containsMatchIn(clean) -> VoiceIntent.WHAT_ON_LEFT
             RIGHT_REGEX.containsMatchIn(clean) -> VoiceIntent.WHAT_ON_RIGHT
@@ -206,5 +216,7 @@ class VoiceCommandProcessor(
         private val FRONT_REGEX = Regex("""\bwhat\s+(is|s)\s+(in\s+front|ahead|directly\s+ahead)\b|\bwhat'?s\s+(in\s+front|ahead)\b""")
         private val LEFT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?left|to\s+(my\s+)?left)\b|\b(look|anything\s+on\s+the)\s+left\b""")
         private val RIGHT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?right|to\s+(my\s+)?right)\b|\b(look|anything\s+on\s+the)\s+right\b""")
+        private val GREETING_REGEX = Regex("""\b(hello|hi|hey|good\s+(morning|afternoon|evening)|who\s+are\s+you|who\s+is\s+this)\b""")
+        private val HELP_REGEX = Regex("""\b(help|what\s+can\s+you\s+do|commands|options|how\s+to\s+use)\b""")
     }
 }

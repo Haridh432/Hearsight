@@ -260,27 +260,35 @@ class _HomeScreenState extends State<HomeScreen> {
                               maxLines: 3,
                               style: const TextStyle(color: Colors.white, fontSize: 14, fontStyle: FontStyle.italic)),
                         ),
-                      if (state.voiceAssistantTranscript.isNotEmpty || state.isVoiceListening)
+                      if (state.voiceAssistantTranscript.isNotEmpty || state.isVoiceListening || state.isVoiceSpeaking)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                state.isVoiceListening ? Icons.mic : Icons.record_voice_over,
-                                color: state.isVoiceListening ? Colors.redAccent : Colors.tealAccent,
+                                state.isVoiceListening
+                                    ? Icons.mic
+                                    : (state.isVoiceSpeaking ? Icons.volume_up : Icons.record_voice_over),
+                                color: state.isVoiceListening
+                                    ? Colors.redAccent
+                                    : (state.isVoiceSpeaking ? Colors.amberAccent : Colors.tealAccent),
                                 size: 16,
                               ),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  state.isVoiceListening && state.voiceAssistantTranscript.isEmpty
-                                      ? 'Listening for voice command…'
-                                      : 'Voice: "${state.voiceAssistantTranscript}"',
+                                  state.isVoiceSpeaking
+                                      ? 'Sago: "${state.voiceAssistantTranscript}"'
+                                      : (state.isVoiceListening && state.voiceAssistantTranscript.isEmpty
+                                          ? 'Sago listening… Speak question or command'
+                                          : 'Voice: "${state.voiceAssistantTranscript}"'),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: state.isVoiceListening ? Colors.redAccent : Colors.tealAccent,
+                                    color: state.isVoiceListening
+                                        ? Colors.redAccent
+                                        : (state.isVoiceSpeaking ? Colors.amberAccent : Colors.tealAccent),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -394,12 +402,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   tooltip: state.isVoiceListening
                       ? 'Listening to voice command… Tap to cancel'
-                      : 'Voice Assistant. Tap to speak command',
+                      : (state.isVoiceSpeaking
+                          ? 'Sago speaking…'
+                          : 'Voice Assistant. Tap to speak command'),
                   visualDensity: VisualDensity.compact,
                   onPressed: () => context.read<AppState>().toggleVoiceAssistant(),
                   icon: Icon(
-                    state.isVoiceListening ? Icons.mic : Icons.mic_none,
-                    color: state.isVoiceListening ? Colors.redAccent : Colors.white,
+                    state.isVoiceListening
+                        ? Icons.mic
+                        : (state.isVoiceSpeaking ? Icons.volume_up : Icons.mic_none),
+                    color: state.isVoiceListening
+                        ? Colors.redAccent
+                        : (state.isVoiceSpeaking ? Colors.amberAccent : Colors.white),
                   ),
                 ),
                 IconButton(
