@@ -18,7 +18,7 @@ class HSV2LiteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppState()),
       ],
       child: MaterialApp(
-        title: 'HSV2 Lite',
+        title: 'Hearsight',
         theme: ThemeData(
           brightness: Brightness.dark,
           primarySwatch: Colors.teal,

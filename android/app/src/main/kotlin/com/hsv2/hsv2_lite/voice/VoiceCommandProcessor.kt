@@ -12,6 +12,7 @@ enum class VoiceIntent {
     WHAT_IN_FRONT,
     WHAT_ON_LEFT,
     WHAT_ON_RIGHT,
+    READ_SCREEN,
     UNKNOWN
 }
 
@@ -58,9 +59,12 @@ class VoiceCommandProcessor(
             VoiceIntent.WHAT_ON_RIGHT -> {
                 querySector(minAngle = 15.0, maxAngle = 65.0, sectorName = "right")
             }
+            VoiceIntent.READ_SCREEN -> {
+                queryScreenStatus()
+            }
             VoiceIntent.UNKNOWN -> {
                 if (parsed.cleanedText.isBlank()) null
-                else "Command not recognized. You can say start navigation, stop navigation, describe surroundings, or ask what is in front, left, or right."
+                else "Command not recognized. You can say: start navigation, stop navigation, describe surroundings, read screen, or ask what is in front, left, or right."
             }
         }
     }
@@ -71,6 +75,7 @@ class VoiceCommandProcessor(
             START_NAV_REGEX.containsMatchIn(clean) -> VoiceIntent.START_NAVIGATION
             STOP_NAV_REGEX.containsMatchIn(clean) -> VoiceIntent.STOP_NAVIGATION
             DESCRIBE_REGEX.containsMatchIn(clean) -> VoiceIntent.DESCRIBE_SURROUNDINGS
+            READ_SCREEN_REGEX.containsMatchIn(clean) -> VoiceIntent.READ_SCREEN
             FRONT_REGEX.containsMatchIn(clean) -> VoiceIntent.WHAT_IN_FRONT
             LEFT_REGEX.containsMatchIn(clean) -> VoiceIntent.WHAT_ON_LEFT
             RIGHT_REGEX.containsMatchIn(clean) -> VoiceIntent.WHAT_ON_RIGHT
@@ -152,12 +157,52 @@ class VoiceCommandProcessor(
         }
     }
 
+    private fun queryScreenStatus(): String {
+        val telemetry = getTelemetry()
+        val status = telemetry?.optString("status") ?: "idle"
+        val isStreaming = status == "streaming"
+        val fps = telemetry?.optDouble("fps", 0.0) ?: 0.0
+
+        val cameraStatus = if (isStreaming) {
+            "Camera is streaming at %.0f frames per second.".format(fps)
+        } else {
+            "Camera is disconnected or waiting for start."
+        }
+
+        val safety = telemetry?.optJSONObject("safety")
+        val obstacleDist = safety?.optDouble("obstacleDist", -1.0) ?: -1.0
+        val obstacleInfo = if (isStreaming) {
+            if (obstacleDist in 0.3..5.0) {
+                "Nearest obstacle is %.1f meters ahead.".format(obstacleDist)
+            } else {
+                "Path ahead is clear."
+            }
+        } else {
+            ""
+        }
+
+        val dets = telemetry?.optJSONArray("detections")
+        val count = dets?.length() ?: 0
+        val detInfo = if (isStreaming && count > 0) {
+            val names = mutableListOf<String>()
+            for (i in 0 until minOf(count, 3)) {
+                val d = dets!!.optJSONObject(i) ?: continue
+                names.add(d.optString("name", d.optString("label", "object")))
+            }
+            "Detected on screen: ${names.joinToString(", ")}."
+        } else ""
+
+        val summary = listOf(cameraStatus, obstacleInfo, detInfo).filter { it.isNotBlank() }.joinToString(" ")
+        return if (summary.isNotBlank()) "Screen status: $summary" else "Screen status: Idle, waiting for navigation."
+    }
+
     companion object {
         private const val TAG = "HSV2VoiceCmd"
 
         private val START_NAV_REGEX = Regex("""\b(start|begin|resume)\s+(navigation|navigating|walk|walking|camera)\b""")
         private val STOP_NAV_REGEX = Regex("""\b(stop|halt|pause|end|cancel)\s+(navigation|navigating|walk|walking|camera)\b""")
         private val DESCRIBE_REGEX = Regex("""\b(describe|description|tell me about)\s+(the\s+)?(surroundings?|scene|room|environment|around)\b|\bwhat is around me\b|\bwhat'?s around me\b""")
+        private val READ_SCREEN_REGEX = Regex("""\b(read|tell me|what is|what's|check|show)\s+(the\s+)?(screen|status|display|telemetry)\b|\bread\s+screen\b|\bscreen\s+status\b|\bwhat\s+does\s+the\s+screen\s+say\b""")
         private val FRONT_REGEX = Regex("""\bwhat\s+(is|s)\s+(in\s+front|ahead|directly\s+ahead)\b|\bwhat'?s\s+(in\s+front|ahead)\b""")
         private val LEFT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?left|to\s+(my\s+)?left)\b|\b(look|anything\s+on\s+the)\s+left\b""")
         private val RIGHT_REGEX = Regex("""\bwhat\s+(is|s)\s+(on\s+(my\s+)?right|to\s+(my\s+)?right)\b|\b(look|anything\s+on\s+the)\s+right\b""")
