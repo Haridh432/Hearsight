@@ -1,10 +1,10 @@
-# HearSight + Argus Unified Navigation & Voice Assistant (hsv2-lite)
+# HearSight + Sago Unified Navigation & Voice Assistant (hsv2-lite)
 
 **A single unified assistive navigation and voice assistant application for blind and low-vision users.**
 
 This repository is a unified merger of two open-source platforms:
 1. **HearSight** ([rnaveen1236/Hearsight](https://github.com/rnaveen1236/Hearsight)): An Intel RealSense D455 depth camera on a head mount feeds an Android phone; the phone finds the floor, obstacles, drop-offs, stairs, and people, computes RGB + depth distance and direction, builds a local 3D map, plans a safe path, and provides deterministic navigation guidance.
-2. **Argus** ([TringyTrongy/argus](https://github.com/TringyTrongy/argus)): Offline voice navigation, voice assistant, and speech recognition pipeline featuring on-device Sherpa ONNX, Moonshine/Parakeet ASR, Silero VAD, AudioRoute management, and real-time voice command processing.
+2. **Sago** ([TringyTrongy/argus](https://github.com/TringyTrongy/argus)): Offline voice navigation, voice assistant, and speech recognition pipeline featuring on-device Sherpa ONNX, Moonshine/Parakeet ASR, Silero VAD, AudioRoute management, and real-time voice command processing.
 
 Everything runs **on the phone completely offline**:
 - **Computer Vision & Perception**: Intel RealSense D455 RGB and depth streaming, YOLOv8s object detection, DeepLab ADE20K semantic segmentation on the Snapdragon NPU (Qualcomm QNN), geometry and D* Lite planning in C++, Flutter UI.
@@ -383,7 +383,7 @@ All phases are merged into `main`.
 - **Qualcomm QNN / QAIRT** runtime — Qualcomm licence; libraries not redistributed in git.
 - **YOLOv8** (Ultralytics, AGPL-3.0) and **DeepLab** (ADE20K) model weights (stored in Git
   LFS) — check their licences before any distribution.
-- **Argus Voice Assistant** (Apache-2.0 / MIT) — Integrated from https://github.com/TringyTrongy/argus
+- **Sago Voice Assistant** (Apache-2.0 / MIT) — Integrated from https://github.com/TringyTrongy/argus
   providing offline speech recognition, Moonshine/Parakeet ASR, Silero VAD, AudioRoute management,
   and offline voice command processing (`com.hsv2.hsv2_lite.voice`).
 - **sherpa-onnx** (Apache-2.0) — Next-gen Kaldi offline speech recognition engine for Android
