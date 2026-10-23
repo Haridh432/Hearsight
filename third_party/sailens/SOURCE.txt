@@ -1,0 +1,10 @@
+Source: https://github.com/wnbotoo/sailens-android commit 683ba08 (2026-10-21)
+Apache-2.0 (see LICENSE, NOTICE). Copied into android/app/src/main/kotlin/com/sailens/:
+  core/log/LogService.kt
+  output/Announcement.kt, SpeechManager.kt, SpeechOwner.kt, HapticPlayer.kt,
+  output/AccessibilityStatusProvider.kt
+Modified: SpeechManager.kt - preferred language (setLanguage / isLanguageAvailable) for
+English / Tamil, chosen in HearSight instead of the app locale.
+The cooldown rules in HearSight's VoiceGuide.kt follow sailens-guidance CooldownManager
+(priority rise bypasses cooldown, capped cooldown, sensor events repeat) - re-implemented,
+not copied.

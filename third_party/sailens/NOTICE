@@ -1,0 +1,14 @@
+Sailens
+Copyright 2026 The Sailens Authors
+
+This product includes software developed by The Sailens Authors and is licensed
+under the Apache License, Version 2.0 (see LICENSE).
+
+This repository ships no machine learning model weights. Model files supplied by
+a user or by a downstream distribution carry their own licenses and training
+dataset terms, which are independent of this repository's Apache-2.0 code
+license. See docs/models.md.
+
+Third-party components distributed with builds of this software are listed in
+the app's open-source licenses screen (see
+sailens-shell/src/main/java/com/sailens/shell/about/OssLibrary.kt).
